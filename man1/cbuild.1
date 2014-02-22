@@ -1,0 +1,174 @@
+.TH CBUILD "1" "2014" "" ""
+
+.SH NAME
+cbuild \- Simple C build tool
+
+.SH SYNOPSIS
+cbuild [
+.B -c
+] [
+.B -o
+.I outfile
+]
+.I infile...
+
+.SH DESCRIPTION
+cbuild is a build tool for C programs. It makes it easy to compile projects
+that need cross platform compatibility. cbuild wraps a supported C compiler
+defaulting to gcc with clang being another option.
+
+cbuild adds support to run a source file as a script using the hash bang method.
+Simply add "#!/path/to/cbuild" and execute the script as you would in a scripting
+language.
+
+cbuild makes it easy to compile cross platforms by separating implementations for
+different systems in files identified by their os and architecture name. Smart
+compilation is detailed below.
+
+If the given input source files don't have an extension, smart compilation is
+enabled and the basename is used as the prefix. Read about smart compilation
+below.
+
+.SH OPTIONS
+.B -c
+    Compile or assemble the source files, but do not link. The output is an
+    archive of objects.
+
+    It's important to notice here, the output isn't an object but an archive.
+    This differs from standard output, and is this way to allow multiple source
+    files objects to be contained in a single place.
+
+.B -o
+.I file
+    Write output to a file. It applies to all files, whether it's an executable.
+    archive, or anything else.
+
+    Refer to the compilers documentation you're using for the default output
+    file names.
+
+.SH SMART COMPILATION
+Smart compilation is a feature that detects and compiles the correct files for
+the destination os and architecture. It compiles source files that match a
+given prefix. The os and architecture signatures are defined below in the
+ENVIRONMENT section.
+
+Source files may have build constraints on the first line(or second if using
+hash bang) and restrict or enable a build for a specified os/architecture.
+The format(which resides in a comment and prefixed with "build:") is evaluated
+as the OR of space-separated options, and each option evaluates as the AND of
+its comma-separated terms; each term is a alphanumeric word or preceded by ! for
+negation. Here's an example:
+
+/* build: linux,386 darwin,!arm */
+
+Will result in the following boolean formula:
+
+(linux and 386) or (darwin and (not arm))
+
+Build constraints also carry over to the files names, after stripping the
+extension and the name prefix the following formats are recognized to detect
+the build constraint:
+
+*_OS.*
+
+*_ARCH.*
+
+*_OS_ARCH.*
+
+If a source file with the name prefix doesn't have constraints after it, it's
+always built. Otherwise it's only built if the constraints are satisfied by the
+destination os/architecture. Here's an example:
+
+sys.c
+  - Always built
+
+sys_linux.c
+  - Only built if OS is linux
+
+sys_windows.c
+  - Only built if OS is windows
+
+sys_windows_386.c
+  - Only built if OS is windows and ARCH is 386
+
+.SH RECOGNIZED SOURCE EXTENSIONS
+Since smart compilation only builds source files for the prefix, we need to make
+sure we don't try to build files that aren't source files, below are a list of
+recognized source file extensions.
+
+\.c
+  - C source code
+
+\.s
+\.asm
+  - Assembly source code
+
+.SH ENVIRONMENT
+This section describes the environment variables that affect the compiler,
+assembler and other tools operations.
+
+.B OS
+= dependent
+    OS sets the destination os to compile and link for, it's also used when
+    doing smart compilation to determine which source files to include. The
+    default value is the name for the current os.
+
+    Valid values:
+      - darwin
+      - linux
+      - windows
+      - freebsd
+      - openbsd
+      - netbsd
+      - dragonfly
+
+.B ARCH
+= dependent
+    ARCH sets the destination architecture to compile and link for, it's also
+    used when doing smart compilation to determine the source files to include.
+    The default value is the current architecture.
+
+    Valid values:
+      - 386
+      - amd64
+      - arm
+
+.B AR
+= ar
+    AR is the program used to produce archives of objects.
+
+.B AS
+= as
+    AS is the program used to assemble assembly source files.
+
+.B CC
+= cc
+    CC is the program used to compile C source files.
+
+    GCC and Clang are the only supported options currently.
+
+.B CPP
+= "$(CC) -E"
+    CPP is the program used to print preprocessor output for a file.
+
+.B ARFLAGS
+= rv
+    Flags to give to AR.
+
+.B ASFLAGS
+    Flags to give to AS.
+
+.B CFLAGS
+    Flags to give to CC.
+
+.B CPPFLAGS
+    Flags to give to CPP and CC.
+
+.B LDFLAGS
+    Flags to give to CC when invoking the linker. Libraries(-llib) should be
+    added to LDLIBS variable instead.
+
+.B LDLIBS
+    Flags to give to CC when invoking the linker. Libraries(-llib) should be
+    given here to ensure correct placement, since they're required to be placed
+    in a specific position in common compilers.
