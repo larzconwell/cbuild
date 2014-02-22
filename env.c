@@ -23,11 +23,6 @@ int newEnv(struct env *env) {
     env->ar = "ar";
   }
 
-  env->as = getenv("AS");
-  if (env->as == NULL) {
-    env->as = "as";
-  }
-
   env->cc = getenv("CC");
   if (env->cc == NULL) {
     env->cc = "cc";
@@ -45,12 +40,7 @@ int newEnv(struct env *env) {
 
   env->arflags = getenv("ARFLAGS");
   if (env->arflags == NULL) {
-    env->arflags = "rv";
-  }
-
-  env->asflags = getenv("ASFLAGS");
-  if (env->asflags == NULL) {
-    env->asflags = "";
+    env->arflags = "crus";
   }
 
   env->cflags = getenv("CFLAGS");

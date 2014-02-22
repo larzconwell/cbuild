@@ -75,12 +75,16 @@ the build constraint:
 
 *_OS_ARCH.*
 
-If a source file with the name prefix doesn't have constraints after it, it's
-always built. Otherwise it's only built if the constraints are satisfied by the
-destination os/architecture. Here's an example:
+If a source file with the name prefix doesn't have constraints, it's not in the
+above format, or the os/architecture are invalid names it's always built.
+Otherwise it's only built if the constraints are satisfied by the destination
+os/architecture. Here's an example:
 
 sys.c
   - Always built
+
+sys_unix.s
+  - Always built since unix isn't valid
 
 sys_linux.c
   - Only built if OS is linux
@@ -88,7 +92,7 @@ sys_linux.c
 sys_windows.c
   - Only built if OS is windows
 
-sys_windows_386.c
+sys_windows_386.s
   - Only built if OS is windows and ARCH is 386
 
 .SH RECOGNIZED SOURCE EXTENSIONS
@@ -101,7 +105,7 @@ recognized source file extensions.
 
 \.s
 \.asm
-  - Assembly source code
+  - assembly source code
 
 .SH ENVIRONMENT
 This section describes the environment variables that affect the compiler,
@@ -136,13 +140,9 @@ assembler and other tools operations.
 = ar
     AR is the program used to produce archives of objects.
 
-.B AS
-= as
-    AS is the program used to assemble assembly source files.
-
 .B CC
 = cc
-    CC is the program used to compile C source files.
+    CC is the program used to compile C/assembly source files.
 
     GCC and Clang are the only supported options currently.
 
@@ -151,11 +151,8 @@ assembler and other tools operations.
     CPP is the program used to print preprocessor output for a file.
 
 .B ARFLAGS
-= rv
+= crus
     Flags to give to AR.
-
-.B ASFLAGS
-    Flags to give to AS.
 
 .B CFLAGS
     Flags to give to CC.

@@ -13,11 +13,9 @@ struct env {
   char *osStr;
   char *archStr;
   char *ar;
-  char *as;
   char *cc;
   char *cpp;
   char *arflags;
-  char *asflags;
   char *cflags;
   char *cppflags;
   char *ldflags;
