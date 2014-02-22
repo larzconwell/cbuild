@@ -1,8 +1,4 @@
-/*
- * env.c
- *
- * Copyright 2014 Larz Conwell, see LICENSE for details.
- */
+// Copyright 2014 Larz Conwell, see LICENSE for details.
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -12,14 +8,14 @@
 static char buf[1001];
 
 int newEnv(struct env *env) {
-  env->os = getenv("OS");
-  if (env->os == NULL) {
-    env->os = CUR_OS;
+  env->osStr = getenv("OS");
+  if (env->osStr == NULL) {
+    env->osStr = CUR_OS;
   }
 
-  env->arch = getenv("ARCH");
-  if (env->arch == NULL) {
-    env->arch = CUR_ARCH;
+  env->archStr = getenv("ARCH");
+  if (env->archStr == NULL) {
+    env->archStr = CUR_ARCH;
   }
 
   env->ar = getenv("AR");

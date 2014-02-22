@@ -1,16 +1,17 @@
-/*
- * env.h
- *
- * Copyright 2014 Larz Conwell, see LICENSE for details.
- */
+// Copyright 2014 Larz Conwell, see LICENSE for details.
 #ifndef CBUILD_ENV_H
 #define CBUILD_ENV_H 1
+
+#include "arch.h"
+#include "os.h"
 
 // env contains the environment variables to configure the
 // build process.
 struct env {
-  char *os;
-  char *arch;
+  struct os *os;
+  struct arch *arch;
+  char *osStr;
+  char *archStr;
   char *ar;
   char *as;
   char *cc;

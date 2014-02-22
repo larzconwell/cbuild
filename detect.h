@@ -1,8 +1,4 @@
-/*
- * detect.h
- *
- * Copyright 2014 Larz Conwell, see LICENSE for details.
- */
+// Copyright 2014 Larz Conwell, see LICENSE for details.
 #ifndef CBUILD_DETECT_H
 #define CBUILD_DETECT_H 1
 
