@@ -1,11 +1,14 @@
 PREFIX ?= /usr/local
 CFLAGS += -std=c99 -Wall -Wextra
-OBJS = $(filter-out cbuild.o, $(patsubst %.c, %.o, $(wildcard *.c)))
+OBJS = env.o
 
-cbuild: $(OBJS)
+cbuild: $(OBJS) sys.a
 
 debug: CFLAGS += -g
 debug: cbuild
+
+sys.a: sys_unix.o sys_windows.o
+	ar crus $@ $^
 
 install: cbuild
 	mkdir -p $(PREFIX)/bin $(PREFIX)/share/man/man1
@@ -13,6 +16,6 @@ install: cbuild
 	install cbuild $(PREFIX)/bin
 
 clean:
-	rm -f cbuild $(OBJS)
+	rm -f cbuild *.o *.a
 
 .PHONY: install clean

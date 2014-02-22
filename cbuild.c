@@ -6,9 +6,14 @@
 #include "os.h"
 #include "arch.h"
 #include "env.h"
+#include "sys.h"
+#include "detect.h"
+
+// Usage.
+static const char *USAGE = "Usage: cbuild [-c] [-o output] files...";
 
 // List of supported oses.
-struct os osList[] = {
+static struct os osList[] = {
   {0, "freebsd"},
   {1, "openbsd"},
   {2, "netbsd"},
@@ -19,14 +24,14 @@ struct os osList[] = {
 };
 
 // List of supported architectures.
-struct arch archList[] = {
+static struct arch archList[] = {
   {0, "386"},
   {1, "amd64"},
   {2, "arm"},
   {-1, ""}
 };
 
-int main(void) {
+int main(int argc, char **argv) {
   int rc = 0;
 
   struct env *env = malloc(sizeof(struct env));
@@ -80,7 +85,18 @@ int main(void) {
     goto cleanup;
   }
 
-  printf("%s %s\n", env->os->name, env->arch->name);
+  // Check if we're displaying help or compiling stdin.
+  if (argc <= 1) {
+    int tty = isaterm(0);
+
+    if (tty < 0 || tty >= 1) {
+      fprintf(stderr, "%s\n", USAGE);
+      rc = 2;
+      goto cleanup;
+    }
+
+    // Compile from stdin
+  }
 
   rc = 0;
   goto cleanup;
