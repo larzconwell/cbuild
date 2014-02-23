@@ -5,17 +5,22 @@
 #include "detect.h"
 #include "env.h"
 
-static char buf[1001];
+static char buf[256];
 
-int newEnv(struct env *env) {
-  env->osStr = getenv("OS");
-  if (env->osStr == NULL) {
-    env->osStr = CUR_OS;
+struct env *newenv(void) {
+  struct env *env = malloc(sizeof(struct env));
+  if (env == NULL) {
+    return env;
   }
 
-  env->archStr = getenv("ARCH");
-  if (env->archStr == NULL) {
-    env->archStr = CUR_ARCH;
+  env->osstr = getenv("OS");
+  if (env->osstr == NULL) {
+    env->osstr = CUR_OS;
+  }
+
+  env->archstr = getenv("ARCH");
+  if (env->archstr == NULL) {
+    env->archstr = CUR_ARCH;
   }
 
   env->ar = getenv("AR");
@@ -30,9 +35,10 @@ int newEnv(struct env *env) {
 
   env->cpp = getenv("CPP");
   if (env->cpp == NULL) {
-    int n = snprintf(buf, 1000, "%s -E", env->cc);
+    int n = snprintf(buf, sizeof(buf), "%s -E", env->cc);
     if (n < 0) {
-      return 0;
+      free(env);
+      return NULL;
     }
 
     env->cpp = buf;
@@ -63,5 +69,5 @@ int newEnv(struct env *env) {
     env->ldlibs = "";
   }
 
-  return 1;
+  return env;
 }

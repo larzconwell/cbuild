@@ -7,7 +7,7 @@ cbuild: $(OBJS) sys.a
 debug: CFLAGS += -g
 debug: cbuild
 
-sys.a: sys_unix.o sys_windows.o
+sys.a: sys.o sys_unix.o sys_windows.o
 	ar crus $@ $^
 
 install: cbuild

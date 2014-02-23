@@ -10,8 +10,8 @@
 struct env {
   struct os *os;
   struct arch *arch;
-  char *osStr;
-  char *archStr;
+  char *osstr;
+  char *archstr;
   char *ar;
   char *cc;
   char *cpp;
@@ -22,9 +22,9 @@ struct env {
   char *ldlibs;
 };
 
-// newEnv fills the given env with the current environment
-// configuration, including defaults if they're not given. 0 is returned
-// if the env couldn't be filled. The resulting fields should not be freed.
-int newEnv(struct env *);
+// newEnv creates a new env with the current environment, including
+// defaults if not given. NULL indicates error, the resulting fields should
+// not be freed.
+struct env *newenv(void);
 
 #endif
