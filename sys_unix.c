@@ -123,7 +123,7 @@ int rmrf(const char *path) {
       n = remove(full);
     }
     free(full);
-    if (n < 0) {
+    if (n < 0 && errno != ENOENT) {
       closedir(dir);
       return -1;
     }
@@ -132,7 +132,7 @@ int rmrf(const char *path) {
   // Remove the final parent directory.
   closedir(dir);
   int n = remove(path);
-  if (n < 0) {
+  if (n < 0 && errno != ENOENT) {
     return -1;
   }
 
