@@ -13,83 +13,29 @@
 
 #include "sys.h"
 
-int istty(int fd) {
+int sys_isatty(int fd) {
   return isatty(fd);
 }
 
-char *tmpdir(void) {
-  char buf[256];
-
-  char *time = currtime();
-  if (time == NULL) {
-    return NULL;
-  }
-
+char *sys_tmpdirpath(void) {
   char *dir = getenv("TMPDIR");
   if (dir == NULL) {
     dir = "/tmp";
   }
 
-  int n = snprintf(buf, sizeof(buf), "%s/cbuild-%s", dir, time);
-  if (n < 0) {
-    free(time);
-    return NULL;
-  }
-
-  char *dirdup = malloc(strlen(buf)+1);
-  if (dirdup == NULL) {
-    free(time);
-    return NULL;
-  }
-  strcpy(dirdup, buf);
-
-  n = mkdirp(dirdup);
-  if (n < 0) {
-    free(time);
-    free(dirdup);
-    return NULL;
-  }
-
-  free(time);
-  return dirdup;
+  return dir;
 }
 
-int mkdirp(const char *path) {
-  size_t pathlen = strlen(path);
-
-  char *pathdup = malloc(pathlen+1);
-  if (pathdup == NULL) {
-    return -1;
-  }
-  strcpy(pathdup, path);
-
-  // Create each directory in the path.
-  for (char *p = pathdup+1; *p; p++) {
-    if (*p == '/') {
-      *p = '\0';
-
-      int n = mkdir(pathdup, S_IRWXU);
-      if (n < 0 && errno != EEXIST) {
-        free(pathdup);
-        return -1;
-      }
-
-      *p = '/';
-    }
-  }
-
-  // Create the final path.
-  int n = mkdir(pathdup, S_IRWXU);
+int sys_mkdir(const char *path) {
+  int n = mkdir(path, S_IRWXU);
   if (n < 0 && errno != EEXIST) {
-    free(pathdup);
     return -1;
   }
 
-  free(pathdup);
   return 0;
 }
 
-int rmrf(const char *path) {
+int sys_rmrf(const char *path) {
   struct dirent *entry;
 
   DIR *dir = opendir(path);
@@ -118,7 +64,7 @@ int rmrf(const char *path) {
     }
 
     if (entry->d_type == DT_DIR) {
-      n = rmrf(full);
+      n = sys_rmrf(full);
     } else {
       n = remove(full);
     }

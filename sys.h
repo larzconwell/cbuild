@@ -2,22 +2,30 @@
 #ifndef CBUILD_SYS_H
 #define CBUILD_SYS_H 1
 
-#include <stdio.h>
+// sys_isatty checks if a file descriptor is associated with a terminal,
+// on non Unix machines this should return -1.
+int sys_isatty(int);
 
-// istty checks if a file descriptor is associated with a terminal, on non
-// Unix machines this should return -1.
-int istty(int);
+// sys_tmpdir creates a temporary directory. NULL indicates error.
+char *sys_tmpdir(void);
 
-// tmpdir creates a temporary directory. NULL indicates error.
-char *tmpdir(void);
+// sys_tmpdirpath retrieves the base temporary directory. The result
+// should not be freed.
+char *sys_tmpdirpath(void);
 
-// currtime retrieves the current time as a string. NULL indicates error.
-char *currtime(void);
+// sys_currtime retrieves the current time as a string. NULL
+// indicates error.
+char *sys_currtime(void);
 
-// mkdirp creates the given directory and it's parents. -1 indicates error.
-int mkdirp(const char *);
+// sys_mkdirp creates the given directory and it's parents. -1
+// indicates error.
+int sys_mkdirp(const char *);
 
-// rmrf removes a directory and it's contents. -1 indicates error.
-int rmrf(const char *);
+// sys_mkdir creates the given directory, -1 indicates error.
+int sys_mkdir(const char *);
+
+// sys_rmrf removes a directory and it's contents. -1 indicates
+// error.
+int sys_rmrf(const char *);
 
 #endif

@@ -79,7 +79,7 @@ int main(int argc, char **argv) {
   }
 
   // Check if we should display help.
-  int tty = istty(0);
+  int tty = sys_isatty(0);
   if (argc <= 1) {
     if (tty < 0 || tty >= 1) {
       fprintf(stderr, "%s\n", USAGE);
@@ -89,7 +89,7 @@ int main(int argc, char **argv) {
   }
 
   // Create build directory.
-  char *builddir = tmpdir();
+  char *builddir = sys_tmpdir();
   if (builddir == NULL) {
     fprintf(stderr, "Unable to create build directory.\n");
     rc = 1;
@@ -99,7 +99,7 @@ int main(int argc, char **argv) {
   printf("%s\n", builddir);
 
   // Clean up the build directory.
-  int n = rmrf(builddir);
+  int n = sys_rmrf(builddir);
   free(builddir);
   if (n < 0) {
     fprintf(stderr, "Unable to remove build directory.\n");
