@@ -290,6 +290,7 @@ static int parse_fstrain(vector_t *args, platform_t os, platform_t arch, char *n
 
   // Check if *_ARCH or *_OS_ARCH formats.
   if (strcmp(last, arch.name) == 0) {
+    // Check if the item before the last is a valid OS.
     bool found = false;
     for (int i = 0; ; i++) {
       platform_t plat = os_list[i];
@@ -303,6 +304,8 @@ static int parse_fstrain(vector_t *args, platform_t os, platform_t arch, char *n
       }
     }
 
+    // If the item before the last is the dest OS, or if it's no a valid OS
+    // we can add it to the list.
     if (strcmp(queue[queuelen - 2], os.name) == 0 || !found) {
       path_arg_t *arg = malloc(sizeof(path_arg_t));
       if (arg == NULL) {
@@ -322,11 +325,6 @@ static int parse_fstrain(vector_t *args, platform_t os, platform_t arch, char *n
       goto cleanup;
     }
   }
-
-  //         if last underscore is ARCH
-  //           if underscore before last is OS or is not in the OS list
-  //             add path to args list
-  //             continue
 
 cleanup:
   for (size_t i = 0; i < queuelen; i++) {
