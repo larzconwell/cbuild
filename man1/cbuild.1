@@ -14,98 +14,79 @@ cbuild [
 
 .SH DESCRIPTION
 cbuild is a build tool for C programs. It makes it easy to compile projects
-that need cross platform compatibility. cbuild wraps a supported C compiler
-defaulting to gcc with clang being another option.
-
-cbuild adds support to run a source file as a script using the hash bang method.
-Simply add "#!/path/to/cbuild" and execute the script as you would in a scripting
-language.
+that need cross platform compatibility. cbuild uses the host systems GCC installation
+to compile and link code.
 
 cbuild makes it easy to compile cross platforms by separating implementations for
-different systems in files identified by their os and architecture name. Smart
-compilation is detailed below.
-
-If the given input source files don't have an extension, smart compilation is
-enabled and the basename is used as the prefix. Read about smart compilation
-below.
+different systems in files identified by their os and architecture name. Build
+constraints are detailed below.
 
 .SH OPTIONS
 .B -c
     Compile or assemble the source files, but do not link. The output is an
     archive of objects.
 
-    It's important to notice here, the output isn't an object but an archive.
-    This differs from standard output, and is this way to allow multiple source
+    It's important to notice here that the output isn't an object but an archive.
+    This differs from standard GCC output, and is this way to allow multiple source
     files objects to be contained in a single place.
 
 .B -o
 .I file
-    Write output to a file. It applies to all files, whether it's an executable.
+    Write output to a file. It applies to all files, whether it's an executable,
     archive, or anything else.
 
-    Refer to the compilers documentation you're using for the default output
-    file names.
+    By default archives will be out.a, and binaries will be out(out.exe for Windows).
 
-.SH SMART COMPILATION
-Smart compilation is a feature that detects and compiles the correct files for
-the destination os and architecture. It compiles source files that match a
-given prefix. The os and architecture signatures are defined below in the
-ENVIRONMENT section.
+.SH BUILD CONSTRAINTS
+When passing arguments to cbuild if a path has an extension, it doesn't have
+any build constraints. For source files this means they are compiled regardless
+of the destination platform. For other non source files(such as objects, and
+archives) they are only consulted during the linking/archiving steps.
 
-Source files may have build constraints on the first line(or second if using
-hash bang) and restrict or enable a build for a specified os/architecture.
-The format(which resides in a comment and prefixed with "build:") is evaluated
-as the OR of space-separated options, and each option evaluates as the AND of
-its comma-separated terms; each term is a alphanumeric word or preceded by ! for
-negation. Here's an example:
+If the path doesn't have an extension it looks at all the paths that start with
+the file name.
 
-/* build: linux,386 darwin,!arm */
+When checking if a path should be included for the build, first it checks if
+the path has a build tag in the file. A build tag starts with "// +build" and
+should be located in one of the top ten lines of the file. The extended comment
+format /**/ is not supported. The format is evaluated as the OR of space-separated
+options; each option evaluates as the AND of its comma-separated terms. Each term
+should be a supported OS or ARCH; if the terms don't consist of a supported OS
+or ARCH the path is ignored.
 
-Will result in the following boolean formula:
+The build tag:
 
-(linux and 386) or (darwin and (not arm))
+  // +build amd64 linux,386 darwin,386 freebsd
 
-Build constraints also carry over to the files names, after stripping the
-extension and the name prefix the following formats are recognized to detect
-the build constraint:
+Corresponds to the boolean formula:
 
-*_OS.*
+  (amd64) OR (linux AND 386) OR (darwin AND 386) OR (freebsd)
 
-*_ARCH.*
+If the path doesn't have a build tag, it inspects the name. If a paths's name
+minus any extension matches one of the following patterns:
 
-*_OS_ARCH.*
+  *_OS
+  *_ARCH
+  *_OS_ARCH
 
-If a source file with the name prefix doesn't have constraints, it's not in the
-above format, or the os/architecture are invalid names it's always built.
-Otherwise it's only built if the constraints are satisfied by the destination
-os/architecture. Here's an example:
+Where OS and ARCH are one of the supported platforms, the path is considered
+to have an implicit build tag requiring those terms.
 
-sys.c
-  - Always built
-
-sys_unix.s
-  - Always built since unix isn't valid
-
-sys_linux.c
-  - Only built if OS is linux
-
-sys_windows.c
-  - Only built if OS is windows
-
-sys_windows_386.s
-  - Only built if OS is windows and ARCH is 386
+If the file has no build tags, or its name doesn't match the file patterns then
+it's always included for the build.
 
 .SH RECOGNIZED SOURCE EXTENSIONS
-Since smart compilation only builds source files for the prefix, we need to make
-sure we don't try to build files that aren't source files, below are a list of
-recognized source file extensions.
+The following extensions are supported for cbuild. If a path is given and its
+extension can't be found in the list below, it's passed straight to the
+linker/archiver.
 
-\.c
-  - C source code
-
-\.s
-\.asm
-  - assembly source code
+.B .c
+.B .cxx
+.B .cpp
+.B .c++
+.B .s
+.B .S
+.B .asm
 
 .SH ENVIRONMENT
 This section describes the environment variables that affect the compiler,
@@ -113,58 +94,38 @@ assembler and other tools operations.
 
 .B OS
 = dependent
-    OS sets the destination os to compile and link for, it's also used when
-    doing smart compilation to determine which source files to include. The
-    default value is the name for the current os.
+    OS sets the destination os to compile/link for. The default value is the
+    name for the current os.
 
     Valid values:
-      - darwin
-      - linux
-      - windows
-      - freebsd
-      - openbsd
-      - netbsd
+      - \fBwindows
+      - \fBdarwin
+      - \fBlinux
+      - \fBfreebsd
+      - \fBnetbsd
+      - \fBopenbsd
 
 .B ARCH
 = dependent
-    ARCH sets the destination architecture to compile and link for, it's also
-    used when doing smart compilation to determine the source files to include.
-    The default value is the current architecture.
+    ARCH sets the destination architecture to compile and link for. The default
+    value is the current architecture.
 
     Valid values:
-      - 386
-      - amd64
-      - arm
-
-.B AR
-= ar
-    AR is the program used to produce archives of objects.
-
-.B CC
-= cc
-    CC is the program used to compile C/assembly source files.
-
-    GCC and Clang are the only supported options currently.
-
-.B CPP
-= "$(CC) -E"
-    CPP is the program used to print preprocessor output for a file.
-
-.B ARFLAGS
-= crus
-    Flags to give to AR.
+      - \fB386
+      - \fBamd64
+      - \fBarm
 
 .B CFLAGS
-    Flags to give to CC.
+    Flags to give to the compiler.
 
 .B CPPFLAGS
-    Flags to give to CPP and CC.
+    Flags to give to the preprocessor.
 
 .B LDFLAGS
-    Flags to give to CC when invoking the linker. Libraries(-llib) should be
-    added to LDLIBS variable instead.
+    Flags to give to the compiler when invoking the linker. Libraries(-llib)
+    should be added to LDLIBS variable instead.
 
 .B LDLIBS
-    Flags to give to CC when invoking the linker. Libraries(-llib) should be
-    given here to ensure correct placement, since they're required to be placed
-    in a specific position in common compilers.
+    Flags to give to compiler when invoking the linker. Libraries(-llib) should
+    be given here to ensure correct placement, since they're required to be
+    placed in a specific position in common compilers.

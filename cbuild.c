@@ -1,116 +1,136 @@
-// Copyright 2014 Larz Conwell, see LICENSE for details.
 #include <stdlib.h>
 #include <stdio.h>
-#include <string.h>
+#include <stdbool.h>
 
-#include "os.h"
-#include "arch.h"
-#include "env.h"
+#include "deps/commander/commander.h"
+#include "deps/vector/vector.h"
+
+#include "cbuild.h"
 #include "sys.h"
+#include "path.h"
 #include "detect.h"
+#include "util.h"
 
-static const char *USAGE = "Usage: cbuild [-c] [-o output] files...";
+// Command line flags.
+bool compileOnly = false;
+char *out = NULL;
 
-// os_list is a list of supported oses.
-static struct os os_list[] = {
-  {0, "freebsd"},
-  {1, "openbsd"},
-  {2, "netbsd"},
-  {3, "darwin"},
-  {4, "linux"},
-  {5, "windows"},
-  {-1, ""}
-};
+// set_compile sets the compile flag to true.
+static void set_compile(command_t *);
+static void set_compile(command_t *cmd) {
+  (void)(cmd); // Supress unused warning.
 
-// arch_list is a list of supported architectures.
-static struct arch arch_list[] = {
-  {0, "386"},
-  {1, "amd64"},
-  {2, "arm"},
-  {-1, ""}
-};
+  compileOnly = true;
+}
+
+// set_out sets the output file to write to.
+static void set_out(command_t *);
+static void set_out(command_t *cmd) {
+  out = (char *)cmd->arg;
+}
 
 int main(int argc, char **argv) {
-  int rc = 0;
+  int ret = 0; // Exit code.
+  command_t cmd;
+  command_init(&cmd, "cbuild", VERSION);
+  command_option(&cmd, "-c", "--compile", "Compile but don't link. The output is an archive of the compiled objects.", set_compile);
+  command_option(&cmd, "-o", "--out <name>", "Set the output file name.", set_out);
+  command_parse(&cmd, argc, argv);
 
-  struct env *env = newenv();
-  if (env == NULL) {
-    fprintf(stderr, "Unable to generate environment.\n");
-    rc = 1;
-    goto cleanup;
+  vector_t args;
+  if (vector_new(&args, 20) == NULL) {
+    perror("cbuild");
+    ret = 1;
+    goto exit;
   }
 
-  // Get the appropriate os struct.
-  struct os os;
-  for (int i = 0; ; i++) {
-    os = os_list[i];
-    if (os.ident < 0) {
-      break;
+  // Figure out dest os.
+  platform_t os = dest_os();
+  if (os.ident == ((platform_t)UNKNOWN_OS).ident) {
+    char *name = getenv("OS");
+    if (name == NULL) {
+      fprintf(stderr, "cbuild: Current OS is not supported.\n");
+    } else {
+      fprintf(stderr, "cbuild: OS %s is not supported.\n", name);
     }
+    ret = 1;
+    goto exit;
+  }
 
-    if (strcmp(os.name, env->osstr) == 0) {
-      env->os = &os;
-      break;
+  // Figure out dest arch.
+  platform_t arch = dest_arch();
+  if (arch.ident == ((platform_t)UNKNOWN_OS).ident) {
+    char *name = getenv("ARCH");
+    if (name == NULL) {
+      fprintf(stderr, "cbuild: Current architecture is not supported.\n");
+    } else {
+      fprintf(stderr, "cbuild: ARCH %s is not supported.\n", name);
     }
-  }
-  if (env->os == NULL) {
-    fprintf(stderr, "OS %s is not supported.\n", env->osstr);
-    rc = 1;
-    goto cleanup;
+    ret = 1;
+    goto exit;
   }
 
-  // Get the appropriate arch struct.
-  struct arch arch;
-  for (int i = 0; ; i++) {
-    arch = arch_list[i];
-    if (arch.ident < 0) {
-      break;
-    }
+  // Set the output name if no option set it.
+  if (out == NULL) {
+    if (compileOnly) {
+      out = "out.a";
+    } else {
+      out = "out";
 
-    if (strcmp(arch.name, env->archstr) == 0) {
-      env->arch = &arch;
-      break;
-    }
-  }
-  if (env->arch == NULL) {
-    fprintf(stderr, "ARCH %s is not supported.\n", env->archstr);
-    rc = 1;
-    goto cleanup;
-  }
-
-  // Check if we should display help.
-  int tty = sys_isatty(0);
-  if (argc <= 1) {
-    if (tty < 0 || tty >= 1) {
-      fprintf(stderr, "%s\n", USAGE);
-      rc = 2;
-      goto cleanup;
+      if (os.ident == ((platform_t)WINDOWS_OS).ident) {
+        out = "out.exe";
+      }
     }
   }
 
-  // Create build directory.
-  char *builddir = sys_tmpdir();
-  if (builddir == NULL) {
-    fprintf(stderr, "Unable to create build directory.\n");
-    rc = 1;
-    goto cleanup;
+  // Error out if no inputs are given.
+  if (cmd.argc <= 0) {
+    fprintf(stderr, "cbuild: no input files\n");
+    ret = 1;
+    goto exit;
   }
 
-  printf("%s\n", builddir);
+  // Get list of files to use for the compile step.
+  for (int i = 0; i < cmd.argc; i++) {
+    vector_t *result = NULL;
+    cmd.argv[i] = trailstr(cmd.argv[i], '/');
 
-  // Clean up the build directory.
-  int n = sys_rmrf(builddir);
-  free(builddir);
-  if (n < 0) {
-    fprintf(stderr, "Unable to remove build directory.\n");
-    rc = 1;
-    goto cleanup;
+    if (extname(cmd.argv[i]) != NULL) {
+      path_arg_t *arg = malloc(sizeof(path_arg_t));
+      if (arg == NULL) {
+        perror("cbuild");
+        ret = 1;
+        goto exit;
+      }
+      arg->path = cmd.argv[i];
+      arg->detected = false;
+
+      result = vector_push(&args, arg);
+    } else {
+      // If no extension is given get files to use for the dest platform.
+      result = detect_files(&args, os, arch, cmd.argv[i]);
+    }
+
+    if (result == NULL) {
+      perror("cbuild");
+      ret = 1;
+      goto exit;
+    }
   }
 
-  rc = 0;
-  goto cleanup;
+  for (size_t i = 0; i < args.len; i++) {
+    printf("Using source: %s\n", ((path_arg_t *)vector_get(&args, i))->path);
+  }
 
-cleanup:
-  free(env);
-  return rc;
+exit:
+  for (size_t i = 0; i < args.len; i++) {
+    path_arg_t *arg = vector_get(&args, i);
+    if (arg->detected) {
+      free(arg->path);
+    }
+    free(arg);
+  }
+  vector_free(&args);
+  command_free(&cmd);
+  return ret;
 }

@@ -1,111 +1,61 @@
-// Copyright 2014 Larz Conwell, see LICENSE for details.
 #include <stdlib.h>
-#include <stdio.h>
-#include <time.h>
 #include <string.h>
 
 #include "sys.h"
 
-char *sys_currtime(void) {
-  time_t time_val = time(NULL);
-  if (time_val == -1) {
-    return NULL;
+platform_t os_list[] = {
+  OPENBSD_OS,
+  NETBSD_OS,
+  FREEBSD_OS,
+  LINUX_OS,
+  DARWIN_OS,
+  WINDOWS_OS,
+  UNKNOWN_OS
+};
+
+platform_t arch_list[] = {
+  I386_ARCH,
+  AMD64_ARCH,
+  ARM_ARCH,
+  UNKNOWN_ARCH
+};
+
+platform_t dest_os(void) {
+  const char *name = getenv("OS");
+  if (name == NULL) {
+    name = ((platform_t)HOST_OS).name;
   }
 
-  struct tm *now = localtime(&time_val);
-  if (now == NULL) {
-    return NULL;
-  }
-
-  char *timestr = asctime(now);
-  if (timestr == NULL) {
-    return NULL;
-  }
-
-  char *timedup = malloc(strlen(timestr)+1);
-  if (timedup == NULL) {
-    return NULL;
-  }
-  strcpy(timedup, timestr);
-
-  // Remove spaces and strip newline.
-  char *i = timedup;
-  char *j = timedup;
-  while (*j != '\0') {
-    *i = *j++;
-    if (*i != ' ' && *i != '\n') {
-      i++;
+  for (int i = 0; ; i++) {
+    platform_t dest = os_list[i];
+    if (dest.ident == -1) {
+      break;
     }
-  }
-  *i = '\0';
 
-  return timedup;
-}
-
-char *sys_tmpdir(void) {
-  char buf[256];
-  char *dir = sys_tmpdirpath();
-
-  char *time = sys_currtime();
-  if (time == NULL) {
-    return NULL;
-  }
-
-  int n = snprintf(buf, sizeof(buf), "%s/cbuild-%s", dir, time);
-  if (n < 0) {
-    free(time);
-    return NULL;
-  }
-
-  char *dirdup = malloc(strlen(buf)+1);
-  if (dirdup == NULL) {
-    free(time);
-    return NULL;
-  }
-  strcpy(dirdup, buf);
-
-  n = sys_mkdirp(dirdup);
-  if (n < 0) {
-    free(time);
-    free(dirdup);
-    return NULL;
-  }
-
-  free(time);
-  return dirdup;
-}
-
-int sys_mkdirp(const char *path) {
-  size_t pathlen = strlen(path);
-
-  char *pathdup = malloc(pathlen+1);
-  if (pathdup == NULL) {
-    return -1;
-  }
-  strcpy(pathdup, path);
-
-  // Create each directory in the path.
-  for (char *p = pathdup+1; *p; p++) {
-    if (*p == '/') {
-      *p = '\0';
-
-      int n = sys_mkdir(pathdup);
-      if (n < 0) {
-        free(pathdup);
-        return -1;
-      }
-
-      *p = '/';
+    if (strcmp(dest.name, name) == 0) {
+      return dest;
     }
   }
 
-  // Create the final path.
-  int n = sys_mkdir(pathdup);
-  if (n < 0) {
-    free(pathdup);
-    return -1;
+  return (platform_t)UNKNOWN_OS;
+}
+
+platform_t dest_arch(void) {
+  const char *name = getenv("ARCH");
+  if (name == NULL) {
+    name = ((platform_t)HOST_ARCH).name;
   }
 
-  free(pathdup);
-  return 0;
+  for (int i = 0; ; i++) {
+    platform_t dest = arch_list[i];
+    if (dest.ident == -1) {
+      break;
+    }
+
+    if (strcmp(dest.name, name) == 0) {
+      return dest;
+    }
+  }
+
+  return (platform_t)UNKNOWN_OS;
 }
